@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -24,6 +25,12 @@ func main() {
 		DaemonCmd,
 		backupCmd,
 	}
+
+	//blueforest
+	fmt.Print("my version")
+	fmt.Println(local)
+	return
+
 	if AdvanceBlockCmd != nil {
 		local = append(local, AdvanceBlockCmd)
 	}
