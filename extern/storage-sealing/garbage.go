@@ -31,7 +31,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorID storage.SectorRef, 
 	return out, nil
 }
 
-func (m *Sealing) PledgeSector() error {
+func (m *Sealing) assign worker sector error {
 	cfg, err := m.getConfig()
 	if err != nil {
 		return xerrors.Errorf("getting config: %w", err)

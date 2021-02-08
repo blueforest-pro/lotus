@@ -9,6 +9,7 @@ import (
 	"github.com/filecoin-project/lotus/extern/sector-storage/stores"
 )
 
+// worker的调度结构
 type schedWorker struct {
 	sched  *scheduler
 	worker *workerHandle
@@ -22,6 +23,7 @@ type schedWorker struct {
 	windowsRequested int
 }
 
+// 运行
 // context only used for startup
 func (sh *scheduler) runWorker(ctx context.Context, w Worker) error {
 	info, err := w.Info(ctx)
@@ -77,11 +79,13 @@ func (sh *scheduler) runWorker(ctx context.Context, w Worker) error {
 		windowsRequested: 0,
 	}
 
+	// 运行worker任务调度
 	go sw.handleWorker()
 
 	return nil
 }
 
+// 处理检查worker列表
 func (sw *schedWorker) handleWorker() {
 	worker, sched := sw.worker, sw.sched
 
@@ -162,6 +166,7 @@ func (sw *schedWorker) handleWorker() {
 
 		sw.workerCompactWindows()
 
+		//分配任务
 		// send tasks to the worker
 		sw.processAssignedWindows()
 
@@ -337,6 +342,7 @@ func (sw *schedWorker) workerCompactWindows() {
 	sw.windowsRequested -= compacted
 }
 
+//执行任务分配
 func (sw *schedWorker) processAssignedWindows() {
 	worker := sw.worker
 
@@ -350,9 +356,14 @@ assignLoop:
 			tidx := -1
 
 			worker.lk.Lock()
+			//轮询当前的扇区任务清单
 			for t, todo := range firstWindow.todo {
+				// 所需要资源清单
+				// 根据扇区的任务状态，获取所需资源清单
 				needRes := ResourceTable[todo.taskType][todo.sector.ProofType]
+				// 判断worker是否满足资源需求
 				if worker.preparing.canHandleRequest(needRes, sw.wid, "startPreparing", worker.info.Resources) {
+					// 分配了一个任务，break出循环
 					tidx = t
 					break
 				}
@@ -365,6 +376,7 @@ assignLoop:
 
 			todo := firstWindow.todo[tidx]
 
+			// 处理分配的任务
 			log.Debugf("assign worker sector %d", todo.sector.ID.Number)
 			err := sw.startProcessingTask(sw.taskDone, todo)
 
@@ -387,11 +399,14 @@ assignLoop:
 	}
 }
 
+//开始处理初步分配的任务
 func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRequest) error {
 	w, sh := sw.worker, sw.sched
 
+	// 检查任务资源
 	needRes := ResourceTable[req.taskType][req.sector.ProofType]
 
+	// 锁定worker的处理这个任务需要的资源
 	w.lk.Lock()
 	w.preparing.add(w.info.Resources, needRes)
 	w.lk.Unlock()
@@ -401,6 +416,7 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 		err := req.prepare(req.ctx, sh.workTracker.worker(sw.wid, w.workerRpc))
 		sh.workersLk.Lock()
 
+		// 如果出现异常，释放worker 预分配的资源
 		if err != nil {
 			w.lk.Lock()
 			w.preparing.free(w.info.Resources, needRes)

@@ -134,6 +134,7 @@ func (p *path) sectorPath(sid abi.SectorID, fileType storiface.SectorFileType) s
 	return filepath.Join(p.local, fileType.String(), storiface.SectorName(sid))
 }
 
+// 添加
 func NewLocal(ctx context.Context, ls LocalStorage, index SectorIndex, urls []string) (*Local, error) {
 	l := &Local{
 		localStorage: ls,
@@ -193,6 +194,7 @@ func (st *Local) OpenPath(ctx context.Context, p string) error {
 	return nil
 }
 
+// 开机执行
 func (st *Local) open(ctx context.Context) error {
 	cfg, err := st.localStorage.GetStorage()
 	if err != nil {
@@ -206,6 +208,7 @@ func (st *Local) open(ctx context.Context) error {
 		}
 	}
 
+	//检查storage 健康状态
 	go st.reportHealth(ctx)
 
 	return nil
@@ -292,6 +295,7 @@ func (st *Local) reportHealth(ctx context.Context) {
 	// randomize interval by ~10%
 	interval := (HeartbeatInterval*100_000 + time.Duration(rand.Int63n(10_000))) / 100_000
 
+	// 定时执行检查
 	for {
 		select {
 		case <-time.After(interval):

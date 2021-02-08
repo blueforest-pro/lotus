@@ -108,6 +108,7 @@ func (e *Events) listenHeadChanges(ctx context.Context) {
 	}
 }
 
+// 监听节点事件
 func (e *Events) listenHeadChangesOnce(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

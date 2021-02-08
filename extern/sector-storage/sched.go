@@ -120,6 +120,7 @@ type activeResources struct {
 	cond *sync.Cond
 }
 
+//给worker的任务请求
 type workerRequest struct {
 	sector   storage.SectorRef
 	taskType sealtasks.TaskType
