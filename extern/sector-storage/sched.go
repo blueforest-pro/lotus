@@ -218,11 +218,14 @@ type SchedDiagInfo struct {
 	OpenWindows []string
 }
 
+//计划处理程序
 func (sh *scheduler) runSched() {
 	defer close(sh.closed)
 
 	iw := time.After(InitWait)
 	var initialised bool
+
+	log.Debugf("mydebug:runSched")
 
 	for {
 		var doSched bool
