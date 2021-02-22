@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,10 +17,20 @@ import (
 	"github.com/filecoin-project/lotus/extern/sector-storage/sealtasks"
 )
 
+// worker 信息
 type WorkerInfo struct {
 	Hostname string
 
 	Resources WorkerResources
+
+	//////////////////////////
+	//自定义功能 begin,blueforest 2021.2.22
+	//任务数量计数
+	TaskResourcesLk sync.Mutex
+	TaskResources   map[sealtasks.TaskType]*TaskConfig
+
+	//自定义功能 end,blueforest
+	//////////////////////////
 }
 
 type WorkerResources struct {
@@ -144,3 +155,31 @@ type WorkerReturn interface {
 	ReturnReadPiece(ctx context.Context, callID CallID, ok bool, err *CallError) error
 	ReturnFetch(ctx context.Context, callID CallID, err *CallError) error
 }
+
+
+//==========================================================
+//===== 自定义功能 begin,blueforest 2021.2.22 ==============
+//==========================================================
+
+//worker任务数量配置
+type TaskConfig struct {
+	LimitCount int
+	RunCount   int
+}
+
+//worker任务数量限制
+type taskLimitConfig struct {
+	AddPiece     int
+	PreCommit1   int
+	PreCommit2   int
+	Commit1      int
+	Commit2      int
+	Fetch        int
+	Finalize     int
+	Unseal       int
+	ReadUnsealed int
+}
+
+//==========================================================
+//===== 自定义功能 end,blueforest 2021.2.22 ================
+//==========================================================

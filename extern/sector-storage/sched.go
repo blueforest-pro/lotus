@@ -517,8 +517,26 @@ func (sh *scheduler) trySched() {
 				continue
 			}
 
+			//////////////////////////
+			//自定义功能 begin,blueforest 2021.2.22
+			//判断任务计数是否达到限制
+			//自定义日志
+			log.Debugf("mydebug:SCHED try assign sqi:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
+
+			//自定义功能 end,blueforest
+			//////////////////////////
+
 			log.Debugf("SCHED ASSIGNED sqi:%d sector %d task %s to window %d", sqi, task.sector.ID.Number, task.taskType, wnd)
 
+			//////////////////////////
+			//自定义功能 begin,blueforest 2021.2.22
+			//添加任务计数
+			log.Debugf("mydebug:更改任务计数:%d sector %d task %s to window %d", sqi, task.sector.ID.Number, task.taskType, wnd)
+
+			//自定义功能 end,blueforest
+			//////////////////////////
+
+			//更改资源分配
 			windows[wnd].allocated.add(wr, needRes)
 			// TODO: We probably want to re-sort acceptableWindows here based on new
 			//  workerHandle.utilization + windows[wnd].allocated.utilization (workerHandle.utilization is used in all
@@ -617,3 +635,29 @@ func (sh *scheduler) Close(ctx context.Context) error {
 	}
 	return nil
 }
+
+//==========================================================
+//===== 自定义功能 begin,blueforest 2021.2.22 ==============
+//==========================================================
+
+//worker增加任务计数
+func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
+}
+
+//worker扣除任务计数
+func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
+}
+
+//worker获取任务计数
+func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType, typeCount string) int {
+	return 0
+}
+
+//worker获取剩余任务数量
+func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.TaskType) int {
+	return 0
+}
+
+//==========================================================
+//===== 自定义功能 end,blueforest 2021.2.22 ================
+//==========================================================
