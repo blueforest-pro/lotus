@@ -225,8 +225,10 @@ func (sh *scheduler) runSched() {
 	iw := time.After(InitWait)
 	var initialised bool
 
-	//自定义日志
-	log.Debugf("mydebug:runSched")
+	{
+		//自定义日志
+		log.Debugf("mydebug:runSched")
+	}
 
 	for {
 		var doSched bool
@@ -234,11 +236,23 @@ func (sh *scheduler) runSched() {
 
 		select {
 		case <-sh.workerChange:
+			{
+				//自定义日志
+				log.Debugf("mydebug:workerChange")
+			}
 			doSched = true
 		case dreq := <-sh.workerDisable:
+			{
+				//自定义日志
+				log.Debugf("mydebug:workerDisable")
+			}
 			toDisable = append(toDisable, dreq)
 			doSched = true
 		case req := <-sh.schedule:
+			{
+				//自定义日志
+				log.Debugf("mydebug:schedule")
+			}
 			sh.schedQueue.Push(req)
 			doSched = true
 
@@ -246,9 +260,17 @@ func (sh *scheduler) runSched() {
 				sh.testSync <- struct{}{}
 			}
 		case req := <-sh.windowRequests:
+			{
+				//自定义日志
+				log.Debugf("mydebug:windowRequests")
+			}
 			sh.openWindows = append(sh.openWindows, req)
 			doSched = true
 		case ireq := <-sh.info:
+			{
+				//自定义日志
+				log.Debugf("mydebug:info")
+			}
 			ireq(sh.diag())
 
 		case <-iw:
@@ -268,13 +290,25 @@ func (sh *scheduler) runSched() {
 				select {
 				case <-sh.workerChange:
 				case dreq := <-sh.workerDisable:
+					{
+						//自定义日志
+						log.Debugf("mydebug-loog:workerDisable")
+					}
 					toDisable = append(toDisable, dreq)
 				case req := <-sh.schedule:
+					{
+						//自定义日志
+						log.Debugf("mydebug-loog:schedule")
+					}
 					sh.schedQueue.Push(req)
 					if sh.testSync != nil {
 						sh.testSync <- struct{}{}
 					}
 				case req := <-sh.windowRequests:
+					{
+						//自定义日志
+						log.Debugf("mydebug-loog:windowRequests")
+					}
 					sh.openWindows = append(sh.openWindows, req)
 				default:
 					break loop
@@ -303,6 +337,10 @@ func (sh *scheduler) runSched() {
 				req.done()
 			}
 
+			{
+				//自定义日志
+				log.Debugf("mydebug:trySched")
+			}
 			sh.trySched()
 		}
 
