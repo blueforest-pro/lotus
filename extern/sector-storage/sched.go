@@ -225,6 +225,7 @@ func (sh *scheduler) runSched() {
 	iw := time.After(InitWait)
 	var initialised bool
 
+	//自定义日志
 	log.Debugf("mydebug:runSched")
 
 	for {
