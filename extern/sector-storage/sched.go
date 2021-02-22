@@ -428,6 +428,10 @@ func (sh *scheduler) trySched() {
 
 			task.indexHeap = sqi
 			for wnd, windowRequest := range sh.openWindows {
+				{
+					//自定义日志
+					log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
+				}
 				worker, ok := sh.workers[windowRequest.worker]
 				if !ok {
 					log.Errorf("worker referenced by windowRequest not found (worker: %s)", windowRequest.worker)
