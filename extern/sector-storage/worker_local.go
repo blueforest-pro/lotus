@@ -510,8 +510,23 @@ func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 		memSwap = 0
 	}
 
+	//自定义初始化,blueforest,2021.2.22
+	//old
+	//return storiface.WorkerInfo{
+	//	Hostname: hostname,
+	//	Resources: storiface.WorkerResources{
+	//		MemPhysical: mem.Total,
+	//		MemSwap:     memSwap,
+	//		MemReserved: mem.VirtualUsed + mem.Total - mem.Available, // TODO: sub this process
+	//		CPUs:        uint64(runtime.NumCPU()),
+	//		GPUs:        gpus,
+	//	},
+	//}, nil
+
+	//new
 	return storiface.WorkerInfo{
 		Hostname: hostname,
+		TaskResources: storiface.NewTaskLimitConfig(), //增加初始化配置
 		Resources: storiface.WorkerResources{
 			MemPhysical: mem.Total,
 			MemSwap:     memSwap,

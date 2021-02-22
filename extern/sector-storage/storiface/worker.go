@@ -180,6 +180,88 @@ type taskLimitConfig struct {
 	ReadUnsealed int
 }
 
+func NewTaskLimitConfig() map[sealtasks.TaskType]*TaskConfig {
+	config := &taskLimitConfig{
+		AddPiece:     1,
+		PreCommit1:   1,
+		PreCommit2:   1,
+		Commit1:      1,
+		Commit2:      1,
+		Fetch:        1,
+		Finalize:     1,
+		Unseal:       1,
+		ReadUnsealed: 1,
+	}
+
+	cfgResources := make(map[sealtasks.TaskType]*TaskConfig)
+
+	if _, ok := cfgResources[sealtasks.TTAddPiece]; !ok {
+		cfgResources[sealtasks.TTAddPiece] = &TaskConfig{
+			LimitCount: config.AddPiece,
+			RunCount:   0,
+		}
+	}
+
+	if _, ok := cfgResources[sealtasks.TTPreCommit1]; !ok {
+		cfgResources[sealtasks.TTPreCommit1] = &TaskConfig{
+			LimitCount: config.PreCommit1,
+			RunCount:   0,
+		}
+	}
+
+	if _, ok := cfgResources[sealtasks.TTPreCommit2]; !ok {
+		cfgResources[sealtasks.TTPreCommit2] = &TaskConfig{
+			LimitCount: config.PreCommit2,
+			RunCount:   0,
+		}
+	}
+
+	if _, ok := cfgResources[sealtasks.TTCommit1]; !ok {
+		cfgResources[sealtasks.TTCommit1] = &TaskConfig{
+			LimitCount: config.Commit1,
+			RunCount:   0,
+		}
+	}
+
+	if _, ok := cfgResources[sealtasks.TTCommit2]; !ok {
+		cfgResources[sealtasks.TTCommit2] = &TaskConfig{
+			LimitCount: config.Commit2,
+			RunCount:   0,
+		}
+	}
+
+	if _, ok := cfgResources[sealtasks.TTFetch]; !ok {
+		cfgResources[sealtasks.TTFetch] = &TaskConfig{
+			LimitCount: config.Fetch,
+			RunCount:   0,
+		}
+	}
+
+	if _, ok := cfgResources[sealtasks.TTFinalize]; !ok {
+		cfgResources[sealtasks.TTFinalize] = &TaskConfig{
+			LimitCount: config.Finalize,
+			RunCount:   0,
+		}
+	}
+
+	if _, ok := cfgResources[sealtasks.TTUnseal]; !ok {
+		cfgResources[sealtasks.TTUnseal] = &TaskConfig{
+			LimitCount: config.Unseal,
+			RunCount:   0,
+		}
+	}
+
+	if _, ok := cfgResources[sealtasks.TTReadUnsealed]; !ok {
+		cfgResources[sealtasks.TTReadUnsealed] = &TaskConfig{
+			LimitCount: config.ReadUnsealed,
+			RunCount:   0,
+		}
+	}
+
+	return cfgResources
+}
+
+
 //==========================================================
 //===== 自定义功能 end,blueforest 2021.2.22 ================
 //==========================================================
