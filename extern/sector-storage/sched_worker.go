@@ -82,6 +82,7 @@ func (sh *scheduler) runWorker(ctx context.Context, w Worker) error {
 	return nil
 }
 
+// 执行任务分配调度
 func (sw *schedWorker) handleWorker() {
 	worker, sched := sw.worker, sw.sched
 
@@ -162,6 +163,10 @@ func (sw *schedWorker) handleWorker() {
 
 		sw.workerCompactWindows()
 
+		{
+			//自定义日志
+			log.Debugf("mydebug-handleWorker:执行任务分配调度")
+		}
 		// send tasks to the worker
 		sw.processAssignedWindows()
 
