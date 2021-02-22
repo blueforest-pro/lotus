@@ -543,6 +543,7 @@ func (sh *scheduler) trySched() {
 			//自定义功能 begin,blueforest 2021.2.22
 			//添加任务计数
 			log.Debugf("mydebug:更改任务计数:%d sector %d task %s to window %d", sqi, task.sector.ID.Number, task.taskType, wnd)
+			sh.taskAddOne(wid, task.taskType)
 
 			//自定义功能 end,blueforest
 			//////////////////////////
@@ -653,14 +654,42 @@ func (sh *scheduler) Close(ctx context.Context) error {
 
 //worker增加任务计数
 func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
+	if whl, ok := sh.workers[wid]; ok {
+		whl.info.TaskResourcesLk.Lock()
+		defer whl.info.TaskResourcesLk.Unlock()
+		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+			counts.RunCount++
+			log.Debugf("mydebug:taskAddOne增加任务计数:%v",counts)
+		}
+	}
 }
 
-//worker扣除任务计数
+//worker扣减任务计数
 func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
+	if whl, ok := sh.workers[wid]; ok {
+		whl.info.TaskResourcesLk.Lock()
+		defer whl.info.TaskResourcesLk.Unlock()
+		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+			counts.RunCount--
+			log.Debugf("mydebug:taskAddOne扣减任务计数:%v",counts)
+		}
+	}
 }
 
 //worker获取任务计数
 func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType, typeCount string) int {
+	if whl, ok := sh.workers[wid]; ok {
+		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+			whl.info.TaskResourcesLk.Lock()
+			defer whl.info.TaskResourcesLk.Unlock()
+			if typeCount == "limit" {
+				return counts.LimitCount
+			}
+			if typeCount == "run" {
+				return counts.RunCount
+			}
+		}
+	}
 	return 0
 }
 
