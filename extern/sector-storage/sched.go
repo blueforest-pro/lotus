@@ -428,15 +428,22 @@ func (sh *scheduler) trySched() {
 
 			task.indexHeap = sqi
 			for wnd, windowRequest := range sh.openWindows {
-				{
-					//自定义日志
-					log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
-				}
 				worker, ok := sh.workers[windowRequest.worker]
 				if !ok {
 					log.Errorf("worker referenced by windowRequest not found (worker: %s)", windowRequest.worker)
 					// TODO: How to move forward here?
 					continue
+				}
+
+				{
+					//自定义日志
+					log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
+
+					//任务信息
+					log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
+
+					//worker信息
+					log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
 				}
 
 				if !worker.enabled {
