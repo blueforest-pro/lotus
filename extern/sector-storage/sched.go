@@ -292,13 +292,13 @@ func (sh *scheduler) runSched() {
 				case dreq := <-sh.workerDisable:
 					{
 						//自定义日志
-						log.Debugf("mydebug-loog:workerDisable")
+						log.Debugf("mydebug-loop:workerDisable")
 					}
 					toDisable = append(toDisable, dreq)
 				case req := <-sh.schedule:
 					{
 						//自定义日志
-						log.Debugf("mydebug-loog:schedule")
+						log.Debugf("mydebug-loop:schedule")
 					}
 					sh.schedQueue.Push(req)
 					if sh.testSync != nil {
@@ -307,7 +307,7 @@ func (sh *scheduler) runSched() {
 				case req := <-sh.windowRequests:
 					{
 						//自定义日志
-						log.Debugf("mydebug-loog:windowRequests")
+						log.Debugf("mydebug-loop:windowRequests")
 					}
 					sh.openWindows = append(sh.openWindows, req)
 				default:
@@ -411,6 +411,7 @@ func (sh *scheduler) trySched() {
 	for i := 0; i < queuneLen; i++ {
 		throttle <- struct{}{}
 
+		// 处理任务
 		go func(sqi int) {
 			defer wg.Done()
 			defer func() {
@@ -419,6 +420,11 @@ func (sh *scheduler) trySched() {
 
 			task := (*sh.schedQueue)[sqi]
 			needRes := ResourceTable[task.taskType][task.sector.ProofType]
+
+			{
+				//自定义日志
+				log.Debugf("mydebug-trySched:taskType:%v", task.taskType)
+			}
 
 			task.indexHeap = sqi
 			for wnd, windowRequest := range sh.openWindows {
