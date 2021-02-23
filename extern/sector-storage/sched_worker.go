@@ -163,10 +163,10 @@ func (sw *schedWorker) handleWorker() {
 
 		sw.workerCompactWindows()
 
-		{
-			//自定义日志
-			log.Debugf("mydebug-handleWorker:执行任务分配调度")
-		}
+		//{
+		//	//自定义日志
+		//	log.Debugf("mydebug-handleWorker:执行任务分配调度")
+		//}
 		// send tasks to the worker
 		sw.processAssignedWindows()
 

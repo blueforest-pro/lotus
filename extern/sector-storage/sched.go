@@ -225,10 +225,10 @@ func (sh *scheduler) runSched() {
 	iw := time.After(InitWait)
 	var initialised bool
 
-	{
-		//自定义日志
-		log.Debugf("mydebug:runSched")
-	}
+	//{
+	//	//自定义日志
+	//	log.Debugf("mydebug:runSched")
+	//}
 
 	for {
 		var doSched bool
@@ -236,23 +236,23 @@ func (sh *scheduler) runSched() {
 
 		select {
 		case <-sh.workerChange:
-			{
-				//自定义日志
-				log.Debugf("mydebug:workerChange")
-			}
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:workerChange")
+			//}
 			doSched = true
 		case dreq := <-sh.workerDisable:
-			{
-				//自定义日志
-				log.Debugf("mydebug:workerDisable")
-			}
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:workerDisable")
+			//}
 			toDisable = append(toDisable, dreq)
 			doSched = true
 		case req := <-sh.schedule:
-			{
-				//自定义日志
-				log.Debugf("mydebug:schedule")
-			}
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:schedule")
+			//}
 			sh.schedQueue.Push(req)
 			doSched = true
 
@@ -260,17 +260,17 @@ func (sh *scheduler) runSched() {
 				sh.testSync <- struct{}{}
 			}
 		case req := <-sh.windowRequests:
-			{
-				//自定义日志
-				log.Debugf("mydebug:windowRequests")
-			}
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:windowRequests")
+			//}
 			sh.openWindows = append(sh.openWindows, req)
 			doSched = true
 		case ireq := <-sh.info:
-			{
-				//自定义日志
-				log.Debugf("mydebug:info")
-			}
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:info")
+			//}
 			ireq(sh.diag())
 
 		case <-iw:
@@ -290,25 +290,25 @@ func (sh *scheduler) runSched() {
 				select {
 				case <-sh.workerChange:
 				case dreq := <-sh.workerDisable:
-					{
-						//自定义日志
-						log.Debugf("mydebug-loop:workerDisable")
-					}
+					//{
+					//	//自定义日志
+					//	log.Debugf("mydebug-loop:workerDisable")
+					//}
 					toDisable = append(toDisable, dreq)
 				case req := <-sh.schedule:
-					{
-						//自定义日志
-						log.Debugf("mydebug-loop:schedule")
-					}
+					//{
+					//	//自定义日志
+					//	log.Debugf("mydebug-loop:schedule")
+					//}
 					sh.schedQueue.Push(req)
 					if sh.testSync != nil {
 						sh.testSync <- struct{}{}
 					}
 				case req := <-sh.windowRequests:
-					{
-						//自定义日志
-						log.Debugf("mydebug-loop:windowRequests")
-					}
+					//{
+					//	//自定义日志
+					//	log.Debugf("mydebug-loop:windowRequests")
+					//}
 					sh.openWindows = append(sh.openWindows, req)
 				default:
 					break loop
@@ -337,10 +337,10 @@ func (sh *scheduler) runSched() {
 				req.done()
 			}
 
-			{
-				//自定义日志
-				log.Debugf("mydebug:trySched")
-			}
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:trySched")
+			//}
 			sh.trySched()
 		}
 
@@ -421,10 +421,10 @@ func (sh *scheduler) trySched() {
 			task := (*sh.schedQueue)[sqi]
 			needRes := ResourceTable[task.taskType][task.sector.ProofType]
 
-			{
-				//自定义日志
-				log.Debugf("mydebug-trySched:taskType:%v", task.taskType)
-			}
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug-trySched:taskType:%v", task.taskType)
+			//}
 
 			task.indexHeap = sqi
 			for wnd, windowRequest := range sh.openWindows {
@@ -435,16 +435,16 @@ func (sh *scheduler) trySched() {
 					continue
 				}
 
-				{
-					//自定义日志
-					log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
-
-					//任务信息
-					log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
-
-					//worker信息
-					log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
-				}
+				//{
+				//	//自定义日志
+				//	log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
+				//
+				//	//任务信息
+				//	log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
+				//
+				//	//worker信息
+				//	log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
+				//}
 
 				if !worker.enabled {
 					log.Debugw("skipping disabled worker", "worker", windowRequest.worker)
@@ -533,7 +533,7 @@ func (sh *scheduler) trySched() {
 				//自定义功能 begin,blueforest 2021.2.22
 				//判断任务计数是否达到限制
 				//自定义日志
-				log.Debugf("mydebug:SCHED try assign sqi:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
+				//log.Debugf("mydebug:SCHED try assign sqi:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
 				freecount := sh.getTaskFreeCount(wid, task.taskType)
 				if freecount <= 0 {
 					log.Debugf("mydebug:任务数量达到上限:sector: %d,task_type:%v, worker:%v",
@@ -550,7 +550,7 @@ func (sh *scheduler) trySched() {
 				//////////////////////////
 				//自定义功能 begin,blueforest 2021.2.22
 				//添加任务计数
-				log.Debugf("mydebug:更改任务计数:sector: %d,task_type:%v, worker:%v",
+				log.Debugf("mydebug:增加任务计数:sector: %d,task_type:%v, worker:%v",
 					task.sector.ID.Number, task.taskType, wid)
 				sh.taskAddOne(wid, task.taskType)
 
@@ -669,7 +669,7 @@ func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) 
 		defer whl.info.TaskResourcesLk.Unlock()
 		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
 			counts.RunCount++
-			log.Debugf("mydebug:taskAddOne增加任务计数:workerId:%v,num:%v", wid, counts)
+			log.Debugf("mydebug:taskAddOne增加任务计数:task_type:%v,workerId:%v,num:%v", phaseTaskType, wid, counts)
 		}
 	}
 }
@@ -681,7 +681,7 @@ func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskTyp
 		defer whl.info.TaskResourcesLk.Unlock()
 		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
 			counts.RunCount--
-			log.Debugf("mydebug:taskAddOne扣减任务计数:workerId:%v,num:%v", wid, counts)
+			log.Debugf("mydebug:taskAddOne扣减任务计数:task_type:%v,workerId:%v,num:%v", phaseTaskType, wid, counts)
 		}
 	}
 }
@@ -714,7 +714,7 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 	}
 
 	whl := sh.workers[wid]
-	log.Infof("mydebug:worker %s %s: %d free count", whl.info.Hostname, phaseTaskType, freeCount)
+	log.Infof("mydebug:worker:%s,take_type:%s,free:%d", whl.info.Hostname, phaseTaskType, freeCount)
 
 	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
 		if freeCount >= 0 { // 空闲数量不小于0，小于0也要校准为0
@@ -728,7 +728,7 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 		if freeCount >= 0 && c2runCount <= 0 { // 需做的任务空闲数量不小于0，且没有c2任务在运行
 			return freeCount
 		}
-		log.Infof("mydebug:worker already doing C2 taskjob")
+		//log.Infof("mydebug:worker already doing C2 taskjob")
 		return 0
 	}
 
@@ -738,7 +738,7 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 		if freeCount >= 0 && p2runCount <= 0 && c1runCount <= 0 { // 需做的任务空闲数量不小于0，且没有p2\c1任务在运行
 			return freeCount
 		}
-		log.Infof("mydebug:worker already doing P2C1 taskjob")
+		//log.Infof("mydebug:worker already doing P2C1 taskjob")
 		return 0
 	}
 
