@@ -310,6 +310,18 @@ func (sw *schedWorker) workerCompactWindows() {
 				lower.allocated.add(worker.info.Resources, needRes)
 				//释放资源
 				window.allocated.free(worker.info.Resources, needRes)
+
+				{
+					//////////////////////////
+					//自定义功能 begin,blueforest 2021.2.22
+					//恢复任务计数
+					log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
+						todo.sector.ID.Number, todo.taskType, sw.wid)
+					sh := sw.sched
+					sh.taskReduceOne(sw.wid, todo.taskType)
+					//自定义功能 end,blueforest
+					//////////////////////////
+				}
 			}
 
 			if len(moved) > 0 {
@@ -411,6 +423,18 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			w.lk.Lock()
 			w.preparing.free(w.info.Resources, needRes)
 			w.lk.Unlock()
+
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//恢复任务计数
+				log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
+					req.sector.ID.Number, req.taskType, sw.wid)
+				sh.taskReduceOne(sw.wid, req.taskType)
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
+
 			sh.workersLk.Unlock()
 
 			select {
@@ -434,6 +458,18 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			w.lk.Lock()
 			w.preparing.free(w.info.Resources, needRes)
 			w.lk.Unlock()
+
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//恢复任务计数
+				log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
+					req.sector.ID.Number, req.taskType, sw.wid)
+				sh.taskReduceOne(sw.wid, req.taskType)
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
+
 			sh.workersLk.Unlock()
 			defer sh.workersLk.Lock() // we MUST return locked from this function
 
