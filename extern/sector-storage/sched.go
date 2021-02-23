@@ -536,7 +536,8 @@ func (sh *scheduler) trySched() {
 				log.Debugf("mydebug:SCHED try assign sqi:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
 				freecount := sh.getTaskFreeCount(wid, task.taskType)
 				if freecount <= 0 {
-					log.Debugf("mydebug:任务数量达到上限:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
+					log.Debugf("mydebug:任务数量达到上限:sector: %d,task_type:%v, worker:%v",
+						task.sector.ID.Number, task.taskType, wid)
 					continue
 				}
 				//自定义功能 end,blueforest
@@ -545,14 +546,17 @@ func (sh *scheduler) trySched() {
 
 			log.Debugf("SCHED ASSIGNED sqi:%d sector %d task %s to window %d", sqi, task.sector.ID.Number, task.taskType, wnd)
 
-			//////////////////////////
-			//自定义功能 begin,blueforest 2021.2.22
-			//添加任务计数
-			log.Debugf("mydebug:更改任务计数:%d sector %d task %s to window %d", sqi, task.sector.ID.Number, task.taskType, wnd)
-			sh.taskAddOne(wid, task.taskType)
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//添加任务计数
+				log.Debugf("mydebug:更改任务计数:sector: %d,task_type:%v, worker:%v",
+					task.sector.ID.Number, task.taskType, wid)
+				sh.taskAddOne(wid, task.taskType)
 
-			//自定义功能 end,blueforest
-			//////////////////////////
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
 
 			//更改资源分配
 			windows[wnd].allocated.add(wr, needRes)
