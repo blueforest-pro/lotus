@@ -459,17 +459,6 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			w.preparing.free(w.info.Resources, needRes)
 			w.lk.Unlock()
 
-			//{
-			//	//////////////////////////
-			//	//自定义功能 begin,blueforest 2021.2.22
-			//	//恢复任务计数
-			//	log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
-			//		req.sector.ID.Number, req.taskType, sw.wid)
-			//	sh.taskReduceOne(sw.wid, req.taskType)
-			//	//自定义功能 end,blueforest
-			//	//////////////////////////
-			//}
-
 			sh.workersLk.Unlock()
 			defer sh.workersLk.Lock() // we MUST return locked from this function
 
@@ -480,6 +469,17 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 
 			// Do the work!
 			err = req.work(req.ctx, sh.workTracker.worker(sw.wid, w.workerRpc))
+
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//恢复任务计数
+				log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
+					req.sector.ID.Number, req.taskType, sw.wid)
+				sh.taskReduceOne(sw.wid, req.taskType)
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
 
 			select {
 			case req.ret <- workerResponse{err: err}:
