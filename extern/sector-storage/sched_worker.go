@@ -308,6 +308,7 @@ func (sw *schedWorker) workerCompactWindows() {
 				moved = append(moved, ti)
 				lower.todo = append(lower.todo, todo)
 				lower.allocated.add(worker.info.Resources, needRes)
+				//释放资源
 				window.allocated.free(worker.info.Resources, needRes)
 			}
 

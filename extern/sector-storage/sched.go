@@ -61,7 +61,7 @@ type scheduler struct {
 	workerDisable  chan workerDisableReq
 
 	// owned by the sh.runSched goroutine
-	schedQueue  *requestQueue
+	schedQueue  *requestQueue //任务请求队列
 	openWindows []*schedWindowRequest
 
 	workTracker *workTracker
@@ -528,14 +528,20 @@ func (sh *scheduler) trySched() {
 				continue
 			}
 
-			//////////////////////////
-			//自定义功能 begin,blueforest 2021.2.22
-			//判断任务计数是否达到限制
-			//自定义日志
-			log.Debugf("mydebug:SCHED try assign sqi:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
-
-			//自定义功能 end,blueforest
-			//////////////////////////
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//判断任务计数是否达到限制
+				//自定义日志
+				log.Debugf("mydebug:SCHED try assign sqi:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
+				freecount := sh.getTaskFreeCount(wid, task.taskType)
+				if freecount <= 0 {
+					log.Debugf("mydebug:任务数量达到上限:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
+					continue
+				}
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
 
 			log.Debugf("SCHED ASSIGNED sqi:%d sector %d task %s to window %d", sqi, task.sector.ID.Number, task.taskType, wnd)
 
@@ -659,7 +665,7 @@ func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) 
 		defer whl.info.TaskResourcesLk.Unlock()
 		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
 			counts.RunCount++
-			log.Debugf("mydebug:taskAddOne增加任务计数:%v",counts)
+			log.Debugf("mydebug:taskAddOne增加任务计数:workerId:%v,num:%v", wid, counts)
 		}
 	}
 }
@@ -671,7 +677,7 @@ func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskTyp
 		defer whl.info.TaskResourcesLk.Unlock()
 		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
 			counts.RunCount--
-			log.Debugf("mydebug:taskAddOne扣减任务计数:%v",counts)
+			log.Debugf("mydebug:taskAddOne扣减任务计数:workerId:%v,num:%v", wid, counts)
 		}
 	}
 }
@@ -695,6 +701,48 @@ func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType
 
 //worker获取剩余任务数量
 func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.TaskType) int {
+	limitCount := sh.getTaskCount(wid, phaseTaskType, "limit") // json文件限制的任务数量
+	runCount := sh.getTaskCount(wid, phaseTaskType, "run")     // 运行中的任务数量
+	freeCount := limitCount - runCount
+
+	if limitCount == 0 { // 0:禁止
+		return 0
+	}
+
+	whl := sh.workers[wid]
+	log.Infof("mydebug:worker %s %s: %d free count", whl.info.Hostname, phaseTaskType, freeCount)
+
+	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+		if freeCount >= 0 { // 空闲数量不小于0，小于0也要校准为0
+			return freeCount
+		}
+		return 0
+	}
+
+	if phaseTaskType == sealtasks.TTPreCommit2 || phaseTaskType == sealtasks.TTCommit1 {
+		c2runCount := sh.getTaskCount(wid, sealtasks.TTCommit2, "run")
+		if freeCount >= 0 && c2runCount <= 0 { // 需做的任务空闲数量不小于0，且没有c2任务在运行
+			return freeCount
+		}
+		log.Infof("mydebug:worker already doing C2 taskjob")
+		return 0
+	}
+
+	if phaseTaskType == sealtasks.TTCommit2 {
+		p2runCount := sh.getTaskCount(wid, sealtasks.TTPreCommit2, "run")
+		c1runCount := sh.getTaskCount(wid, sealtasks.TTCommit1, "run")
+		if freeCount >= 0 && p2runCount <= 0 && c1runCount <= 0 { // 需做的任务空闲数量不小于0，且没有p2\c1任务在运行
+			return freeCount
+		}
+		log.Infof("mydebug:worker already doing P2C1 taskjob")
+		return 0
+	}
+
+	if phaseTaskType == sealtasks.TTFetch || phaseTaskType == sealtasks.TTFinalize ||
+		phaseTaskType == sealtasks.TTUnseal || phaseTaskType == sealtasks.TTReadUnsealed { // 不限制
+		return 1
+	}
+
 	return 0
 }
 

@@ -156,7 +156,6 @@ type WorkerReturn interface {
 	ReturnFetch(ctx context.Context, callID CallID, err *CallError) error
 }
 
-
 //==========================================================
 //===== 自定义功能 begin,blueforest 2021.2.22 ==============
 //==========================================================
@@ -182,15 +181,15 @@ type taskLimitConfig struct {
 
 func NewTaskLimitConfig() map[sealtasks.TaskType]*TaskConfig {
 	config := &taskLimitConfig{
-		AddPiece:     1,
-		PreCommit1:   1,
-		PreCommit2:   1,
-		Commit1:      1,
-		Commit2:      1,
-		Fetch:        1,
-		Finalize:     1,
-		Unseal:       1,
-		ReadUnsealed: 1,
+		AddPiece:     3,
+		PreCommit1:   3,
+		PreCommit2:   3,
+		Commit1:      3,
+		Commit2:      3,
+		Fetch:        3,
+		Finalize:     3,
+		Unseal:       3,
+		ReadUnsealed: 3,
 	}
 
 	cfgResources := make(map[sealtasks.TaskType]*TaskConfig)
@@ -260,7 +259,6 @@ func NewTaskLimitConfig() map[sealtasks.TaskType]*TaskConfig {
 
 	return cfgResources
 }
-
 
 //==========================================================
 //===== 自定义功能 end,blueforest 2021.2.22 ================
