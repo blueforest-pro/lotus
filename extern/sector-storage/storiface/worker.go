@@ -181,8 +181,8 @@ type taskLimitConfig struct {
 
 func NewTaskLimitConfig() map[sealtasks.TaskType]*TaskConfig {
 	config := &taskLimitConfig{
-		AddPiece:     8,
-		PreCommit1:   8,
+		AddPiece:     3,
+		PreCommit1:   4,
 		PreCommit2:   8,
 		Commit1:      8,
 		Commit2:      8,
