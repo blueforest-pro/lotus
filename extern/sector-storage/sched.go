@@ -745,8 +745,8 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 	}
 
 	whl := sh.workers[wid]
-	log.Infof("mydebug:getTaskFreeCount:%s,take_type:%s,limit:%d,runCount:%d,free:%d",
-		whl.info.Hostname, phaseTaskType, limitCount, runCount, freeCount)
+	log.Infof("mydebug:getTaskFreeCount:wid:%s,hostname:%v,take_type:%s,limit:%d,runCount:%d,free:%d",
+		wid, whl.info.Hostname, phaseTaskType, limitCount, runCount, freeCount)
 
 	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
 		if freeCount >= 0 { // 空闲数量不小于0，小于0也要校准为0
