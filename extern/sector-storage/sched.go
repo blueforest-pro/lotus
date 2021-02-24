@@ -71,6 +71,15 @@ type scheduler struct {
 	closing  chan struct{}
 	closed   chan struct{}
 	testSync chan struct{} // used for testing
+
+	//////////////////////////
+	//自定义功能 begin,blueforest 2021.2.22
+	//sector和worker的hostname对应map
+	sectorToHostname map[abi.SectorID]string
+
+	//自定义功能 end,blueforest
+	//////////////////////////
+
 }
 
 type workerHandle struct {
@@ -162,6 +171,13 @@ func newScheduler() *scheduler {
 
 		closing: make(chan struct{}),
 		closed:  make(chan struct{}),
+
+		//////////////////////////
+		//自定义功能 begin,blueforest 2021.2.22
+		//sector和worker的hostname对应map
+		sectorToHostname: map[abi.SectorID]string{},
+		//自定义功能 end,blueforest
+		//////////////////////////
 	}
 }
 
@@ -435,16 +451,16 @@ func (sh *scheduler) trySched() {
 					continue
 				}
 
-				//{
-				//	//自定义日志
-				//	log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
-				//
-				//	//任务信息
-				//	log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
-				//
-				//	//worker信息
-				//	log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
-				//}
+				{
+					////自定义日志
+					//log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
+
+					//任务信息
+					log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
+
+					//worker信息
+					log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
+				}
 
 				if !worker.enabled {
 					log.Debugw("skipping disabled worker", "worker", windowRequest.worker)
@@ -454,6 +470,18 @@ func (sh *scheduler) trySched() {
 				// TODO: allow bigger windows
 				if !windows[wnd].allocated.canHandleRequest(needRes, windowRequest.worker, "schedAcceptable", worker.info.Resources) {
 					continue
+				}
+
+				{
+					//////////////////////////
+					//自定义功能 begin,blueforest 2021.2.22
+					//任务分配，添加符合条件的worker
+					//判断task的sector和worker是否匹配
+					if !sh.canWorkerHandleRequest(windowRequest.worker, task) {
+						continue
+					}
+					//自定义功能 end,blueforest
+					//////////////////////////
 				}
 
 				rpcCtx, cancel := context.WithTimeout(task.ctx, SelectorTimeout)
@@ -553,6 +581,9 @@ func (sh *scheduler) trySched() {
 				log.Debugf("mydebug:增加任务计数:sector: %d,task_type:%v, worker:%v",
 					task.sector.ID.Number, task.taskType, wid)
 				sh.taskAddOne(wid, task.taskType)
+
+				//添加sector和worker映射
+				sh.setSectorToHostname(wid, task)
 
 				//自定义功能 end,blueforest
 				//////////////////////////
@@ -748,6 +779,64 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 	}
 
 	return 0
+}
+
+//设置sectorToHostname
+func (sh *scheduler) setSectorToHostname(wid WorkerID, req *workerRequest) {
+
+	log.Debugf("mydebug:setSectorToHostname:sector:%d,task_type:%v,wid:%v,hostname:%v",
+		req.sector.ID.Number, req.taskType, wid, sh.workers[wid].info.Hostname)
+
+	sh.sectorToHostname[req.sector.ID] = sh.workers[wid].info.Hostname
+}
+
+//TTFinalize任务阶段，删除sectorToHostname里的sector
+func (sh *scheduler) removeSectorToHostname(wid WorkerID, req *workerRequest) {
+
+	//TTFinalize任务阶段，删除sectorToHostname里的sector
+	if req.taskType == sealtasks.TTFinalize {
+		log.Debugf("mydebug:removeSectorToHostname:sector:%d,task_type:%v,wid:%v,hostname:%v",
+			req.sector.ID.Number, req.taskType, wid, sh.workers[wid].info.Hostname)
+
+		secId := req.sector.ID
+		if _, ok := sh.sectorToHostname[secId]; ok {
+			delete(sh.sectorToHostname, secId)
+		}
+	}
+}
+
+//判断worker是否可以处理任务请求
+func (sh *scheduler) canWorkerHandleRequest(wid WorkerID, req *workerRequest) bool {
+	//PC1,PC2的任务，确认当前的任务请求是否为worker的本机任务
+	//taskType := req.taskType
+	//secId := req.sector.ID
+
+	log.Debugf("mydebug:canWorkerHandleRequest:sector:%d,task_type:%v,wid:%v",
+		req.sector.ID.Number, req.taskType, wid)
+
+	//PC1和PC2
+	if req.taskType == sealtasks.TTPreCommit1 || req.taskType == sealtasks.TTPreCommit2 {
+		if v, ok := sh.sectorToHostname[req.sector.ID]; ok {
+			whl := sh.workers[wid]
+			if v == whl.info.Hostname {
+				//sector和worker对应
+				log.Debugf("mydebug:canWorkerHandleRequest,匹配:sector:%d,task_type:%v,wid:%v,hostname:%v",
+					req.sector.ID.Number, req.taskType, wid, v)
+				return true
+			} else {
+				log.Debugf("mydebug:canWorkerHandleRequest,不匹配:sector:%d,task_type:%v,wid:%v,need:%v,cur:%v",
+					req.sector.ID.Number, req.taskType, wid, v, whl.info.Hostname)
+				return false
+			}
+		} else {
+			// 未找到记录，允许自由分配
+			log.Debugf("mydebug:canWorkerHandleRequest,未找到记录,允许运行:sector:%d,task_type:%v,wid:%v",
+				req.sector.ID.Number, req.taskType, wid)
+			return true
+		}
+	}
+
+	return true
 }
 
 //==========================================================

@@ -311,17 +311,17 @@ func (sw *schedWorker) workerCompactWindows() {
 				//释放资源
 				window.allocated.free(worker.info.Resources, needRes)
 
-				{
-					//////////////////////////
-					//自定义功能 begin,blueforest 2021.2.22
-					//恢复任务计数
-					log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
-						todo.sector.ID.Number, todo.taskType, sw.wid)
-					sh := sw.sched
-					sh.taskReduceOne(sw.wid, todo.taskType)
-					//自定义功能 end,blueforest
-					//////////////////////////
-				}
+				//{
+				//	//////////////////////////
+				//	//自定义功能 begin,blueforest 2021.2.22
+				//	//恢复任务计数
+				//	log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
+				//		todo.sector.ID.Number, todo.taskType, sw.wid)
+				//	sh := sw.sched
+				//	sh.taskReduceOne(sw.wid, todo.taskType)
+				//	//自定义功能 end,blueforest
+				//	//////////////////////////
+				//}
 			}
 
 			if len(moved) > 0 {
@@ -431,6 +431,9 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 				log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
 					req.sector.ID.Number, req.taskType, sw.wid)
 				sh.taskReduceOne(sw.wid, req.taskType)
+
+				//删除sectorToHostname里的sector
+				sh.removeSectorToHostname(sw.wid, req)
 				//自定义功能 end,blueforest
 				//////////////////////////
 			}
@@ -477,6 +480,10 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 				log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
 					req.sector.ID.Number, req.taskType, sw.wid)
 				sh.taskReduceOne(sw.wid, req.taskType)
+
+				//删除sectorToHostname里的sector
+				sh.removeSectorToHostname(sw.wid, req)
+
 				//自定义功能 end,blueforest
 				//////////////////////////
 			}
