@@ -455,11 +455,11 @@ func (sh *scheduler) trySched() {
 					////自定义日志
 					//log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
 
-					//任务信息
-					log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
+					////任务信息
+					//log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
 
-					//worker信息
-					log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
+					////worker信息
+					//log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
 				}
 
 				if !worker.enabled {
