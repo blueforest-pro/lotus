@@ -578,8 +578,8 @@ func (sh *scheduler) trySched() {
 				//////////////////////////
 				//自定义功能 begin,blueforest 2021.2.22
 				//添加任务计数
-				log.Debugf("mydebug:增加任务计数:sector: %d,task_type:%v, worker:%v",
-					task.sector.ID.Number, task.taskType, wid)
+				//log.Debugf("mydebug:增加任务计数:sector: %d,task_type:%v, worker:%v",
+				//	task.sector.ID.Number, task.taskType, wid)
 				sh.taskAddOne(wid, task.taskType)
 
 				//添加sector和worker映射
@@ -700,7 +700,8 @@ func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) 
 		defer whl.info.TaskResourcesLk.Unlock()
 		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
 			counts.RunCount++
-			log.Debugf("mydebug:taskAddOne增加任务计数:task_type:%v,workerId:%v,num:%v", phaseTaskType, wid, counts)
+			log.Debugf("mydebug:taskAddOne增加任务计数:task_type:%v,workerId:%v,limitcount:%v,runcount:%v",
+				phaseTaskType, wid, counts.LimitCount, counts.RunCount)
 		}
 	}
 }
@@ -712,7 +713,8 @@ func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskTyp
 		defer whl.info.TaskResourcesLk.Unlock()
 		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
 			counts.RunCount--
-			log.Debugf("mydebug:taskAddOne扣减任务计数:task_type:%v,workerId:%v,num:%v", phaseTaskType, wid, counts)
+			log.Debugf("mydebug:taskAddOne扣减任务计数:task_type:%v,workerId:%v,limitcount:%v,runcount:%v",
+				phaseTaskType, wid, counts.LimitCount, counts.RunCount)
 		}
 	}
 }
