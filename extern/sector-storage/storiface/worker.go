@@ -181,15 +181,15 @@ type taskLimitConfig struct {
 
 func NewTaskLimitConfig() map[sealtasks.TaskType]*TaskConfig {
 	config := &taskLimitConfig{
-		AddPiece:     3,
-		PreCommit1:   3,
-		PreCommit2:   3,
-		Commit1:      3,
-		Commit2:      3,
-		Fetch:        3,
-		Finalize:     3,
-		Unseal:       3,
-		ReadUnsealed: 3,
+		AddPiece:     8,
+		PreCommit1:   8,
+		PreCommit2:   8,
+		Commit1:      8,
+		Commit2:      8,
+		Fetch:        8,
+		Finalize:     8,
+		Unseal:       8,
+		ReadUnsealed: 8,
 	}
 
 	cfgResources := make(map[sealtasks.TaskType]*TaskConfig)
