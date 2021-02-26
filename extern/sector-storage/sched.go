@@ -61,7 +61,7 @@ type scheduler struct {
 	workerDisable  chan workerDisableReq
 
 	// owned by the sh.runSched goroutine
-	schedQueue  *requestQueue
+	schedQueue  *requestQueue //任务请求队列
 	openWindows []*schedWindowRequest
 
 	workTracker *workTracker
@@ -71,6 +71,15 @@ type scheduler struct {
 	closing  chan struct{}
 	closed   chan struct{}
 	testSync chan struct{} // used for testing
+
+	//////////////////////////
+	//自定义功能 begin,blueforest 2021.2.22
+	//sector和worker的hostname对应map
+	sectorToHostname map[abi.SectorID]string
+
+	//自定义功能 end,blueforest
+	//////////////////////////
+
 }
 
 type workerHandle struct {
@@ -162,6 +171,13 @@ func newScheduler() *scheduler {
 
 		closing: make(chan struct{}),
 		closed:  make(chan struct{}),
+
+		//////////////////////////
+		//自定义功能 begin,blueforest 2021.2.22
+		//sector和worker的hostname对应map
+		sectorToHostname: map[abi.SectorID]string{},
+		//自定义功能 end,blueforest
+		//////////////////////////
 	}
 }
 
@@ -218,11 +234,17 @@ type SchedDiagInfo struct {
 	OpenWindows []string
 }
 
+//计划处理程序
 func (sh *scheduler) runSched() {
 	defer close(sh.closed)
 
 	iw := time.After(InitWait)
 	var initialised bool
+
+	//{
+	//	//自定义日志
+	//	log.Debugf("mydebug:runSched")
+	//}
 
 	for {
 		var doSched bool
@@ -230,11 +252,23 @@ func (sh *scheduler) runSched() {
 
 		select {
 		case <-sh.workerChange:
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:workerChange")
+			//}
 			doSched = true
 		case dreq := <-sh.workerDisable:
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:workerDisable")
+			//}
 			toDisable = append(toDisable, dreq)
 			doSched = true
 		case req := <-sh.schedule:
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:schedule")
+			//}
 			sh.schedQueue.Push(req)
 			doSched = true
 
@@ -242,9 +276,17 @@ func (sh *scheduler) runSched() {
 				sh.testSync <- struct{}{}
 			}
 		case req := <-sh.windowRequests:
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:windowRequests")
+			//}
 			sh.openWindows = append(sh.openWindows, req)
 			doSched = true
 		case ireq := <-sh.info:
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:info")
+			//}
 			ireq(sh.diag())
 
 		case <-iw:
@@ -264,13 +306,25 @@ func (sh *scheduler) runSched() {
 				select {
 				case <-sh.workerChange:
 				case dreq := <-sh.workerDisable:
+					//{
+					//	//自定义日志
+					//	log.Debugf("mydebug-loop:workerDisable")
+					//}
 					toDisable = append(toDisable, dreq)
 				case req := <-sh.schedule:
+					//{
+					//	//自定义日志
+					//	log.Debugf("mydebug-loop:schedule")
+					//}
 					sh.schedQueue.Push(req)
 					if sh.testSync != nil {
 						sh.testSync <- struct{}{}
 					}
 				case req := <-sh.windowRequests:
+					//{
+					//	//自定义日志
+					//	log.Debugf("mydebug-loop:windowRequests")
+					//}
 					sh.openWindows = append(sh.openWindows, req)
 				default:
 					break loop
@@ -299,6 +353,10 @@ func (sh *scheduler) runSched() {
 				req.done()
 			}
 
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug:trySched")
+			//}
 			sh.trySched()
 		}
 
@@ -369,6 +427,7 @@ func (sh *scheduler) trySched() {
 	for i := 0; i < queuneLen; i++ {
 		throttle <- struct{}{}
 
+		// 处理任务
 		go func(sqi int) {
 			defer wg.Done()
 			defer func() {
@@ -377,6 +436,11 @@ func (sh *scheduler) trySched() {
 
 			task := (*sh.schedQueue)[sqi]
 			needRes := ResourceTable[task.taskType][task.sector.ProofType]
+
+			//{
+			//	//自定义日志
+			//	log.Debugf("mydebug-trySched:taskType:%v", task.taskType)
+			//}
 
 			task.indexHeap = sqi
 			for wnd, windowRequest := range sh.openWindows {
@@ -387,6 +451,17 @@ func (sh *scheduler) trySched() {
 					continue
 				}
 
+				{
+					////自定义日志
+					//log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
+
+					////任务信息
+					//log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
+
+					////worker信息
+					//log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
+				}
+
 				if !worker.enabled {
 					log.Debugw("skipping disabled worker", "worker", windowRequest.worker)
 					continue
@@ -395,6 +470,18 @@ func (sh *scheduler) trySched() {
 				// TODO: allow bigger windows
 				if !windows[wnd].allocated.canHandleRequest(needRes, windowRequest.worker, "schedAcceptable", worker.info.Resources) {
 					continue
+				}
+
+				{
+					//////////////////////////
+					//自定义功能 begin,blueforest 2021.2.22
+					//任务分配，添加符合条件的worker
+					//判断task的sector和worker是否匹配
+					if !sh.canWorkerHandleRequest(windowRequest.worker, task) {
+						continue
+					}
+					//自定义功能 end,blueforest
+					//////////////////////////
 				}
 
 				rpcCtx, cancel := context.WithTimeout(task.ctx, SelectorTimeout)
@@ -469,8 +556,40 @@ func (sh *scheduler) trySched() {
 				continue
 			}
 
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//判断任务计数是否达到限制
+				//自定义日志
+				//log.Debugf("mydebug:SCHED try assign sqi:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
+				freecount := sh.getTaskFreeCount(wid, task.taskType)
+				if freecount <= 0 {
+					log.Debugf("mydebug:任务数量达到上限:sector: %d,task_type:%v, worker:%v",
+						task.sector.ID.Number, task.taskType, wid)
+					continue
+				}
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
+
 			log.Debugf("SCHED ASSIGNED sqi:%d sector %d task %s to window %d", sqi, task.sector.ID.Number, task.taskType, wnd)
 
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//添加任务计数
+				//log.Debugf("mydebug:增加任务计数:sector: %d,task_type:%v, worker:%v",
+				//	task.sector.ID.Number, task.taskType, wid)
+				sh.taskAddOne(wid, task.taskType)
+
+				//添加sector和worker映射
+				sh.setSectorToHostname(wid, task)
+
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
+
+			//更改资源分配
 			windows[wnd].allocated.add(wr, needRes)
 			// TODO: We probably want to re-sort acceptableWindows here based on new
 			//  workerHandle.utilization + windows[wnd].allocated.utilization (workerHandle.utilization is used in all
@@ -569,3 +688,160 @@ func (sh *scheduler) Close(ctx context.Context) error {
 	}
 	return nil
 }
+
+//==========================================================
+//===== 自定义功能 begin,blueforest 2021.2.22 ==============
+//==========================================================
+
+//worker增加任务计数
+func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
+	if whl, ok := sh.workers[wid]; ok {
+		whl.info.TaskResourcesLk.Lock()
+		defer whl.info.TaskResourcesLk.Unlock()
+		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+			counts.RunCount++
+			log.Debugf("mydebug:taskAddOne增加任务计数:task_type:%v,workerId:%v,limitcount:%v,runcount:%v",
+				phaseTaskType, wid, counts.LimitCount, counts.RunCount)
+		}
+	}
+}
+
+//worker扣减任务计数
+func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
+	if whl, ok := sh.workers[wid]; ok {
+		whl.info.TaskResourcesLk.Lock()
+		defer whl.info.TaskResourcesLk.Unlock()
+		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+			counts.RunCount--
+			log.Debugf("mydebug:taskAddOne扣减任务计数:task_type:%v,workerId:%v,limitcount:%v,runcount:%v",
+				phaseTaskType, wid, counts.LimitCount, counts.RunCount)
+		}
+	}
+}
+
+//worker获取任务计数
+func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType, typeCount string) int {
+	if whl, ok := sh.workers[wid]; ok {
+		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+			whl.info.TaskResourcesLk.Lock()
+			defer whl.info.TaskResourcesLk.Unlock()
+			if typeCount == "limit" {
+				return counts.LimitCount
+			}
+			if typeCount == "run" {
+				return counts.RunCount
+			}
+		}
+	}
+	return 0
+}
+
+//worker获取剩余任务数量
+func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.TaskType) int {
+	limitCount := sh.getTaskCount(wid, phaseTaskType, "limit") // json文件限制的任务数量
+	runCount := sh.getTaskCount(wid, phaseTaskType, "run")     // 运行中的任务数量
+	freeCount := limitCount - runCount
+
+	if limitCount == 0 { // 0:禁止
+		return 0
+	}
+
+	whl := sh.workers[wid]
+	log.Infof("mydebug:getTaskFreeCount:wid:%s,hostname:%v,take_type:%s,limit:%d,runCount:%d,free:%d",
+		wid, whl.info.Hostname, phaseTaskType, limitCount, runCount, freeCount)
+
+	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+		if freeCount >= 0 { // 空闲数量不小于0，小于0也要校准为0
+			return freeCount
+		}
+		return 0
+	}
+
+	if phaseTaskType == sealtasks.TTPreCommit2 || phaseTaskType == sealtasks.TTCommit1 {
+		c2runCount := sh.getTaskCount(wid, sealtasks.TTCommit2, "run")
+		if freeCount >= 0 && c2runCount <= 0 { // 需做的任务空闲数量不小于0，且没有c2任务在运行
+			return freeCount
+		}
+		//log.Infof("mydebug:worker already doing C2 taskjob")
+		return 0
+	}
+
+	if phaseTaskType == sealtasks.TTCommit2 {
+		p2runCount := sh.getTaskCount(wid, sealtasks.TTPreCommit2, "run")
+		c1runCount := sh.getTaskCount(wid, sealtasks.TTCommit1, "run")
+		if freeCount >= 0 && p2runCount <= 0 && c1runCount <= 0 { // 需做的任务空闲数量不小于0，且没有p2\c1任务在运行
+			return freeCount
+		}
+		//log.Infof("mydebug:worker already doing P2C1 taskjob")
+		return 0
+	}
+
+	if phaseTaskType == sealtasks.TTFetch || phaseTaskType == sealtasks.TTFinalize ||
+		phaseTaskType == sealtasks.TTUnseal || phaseTaskType == sealtasks.TTReadUnsealed { // 不限制
+		return 1
+	}
+
+	return 0
+}
+
+//设置sectorToHostname
+func (sh *scheduler) setSectorToHostname(wid WorkerID, req *workerRequest) {
+
+	log.Debugf("mydebug:setSectorToHostname:sector:%d,task_type:%v,wid:%v,hostname:%v",
+		req.sector.ID.Number, req.taskType, wid, sh.workers[wid].info.Hostname)
+
+	sh.sectorToHostname[req.sector.ID] = sh.workers[wid].info.Hostname
+}
+
+//TTFinalize任务阶段，删除sectorToHostname里的sector
+func (sh *scheduler) removeSectorToHostname(wid WorkerID, req *workerRequest) {
+
+	//TTFinalize任务阶段，删除sectorToHostname里的sector
+	if req.taskType == sealtasks.TTFinalize {
+		log.Debugf("mydebug:removeSectorToHostname:sector:%d,task_type:%v,wid:%v,hostname:%v",
+			req.sector.ID.Number, req.taskType, wid, sh.workers[wid].info.Hostname)
+
+		secId := req.sector.ID
+		if _, ok := sh.sectorToHostname[secId]; ok {
+			delete(sh.sectorToHostname, secId)
+		}
+	}
+}
+
+//判断worker是否可以处理任务请求
+func (sh *scheduler) canWorkerHandleRequest(wid WorkerID, req *workerRequest) bool {
+	//PC1,PC2的任务，确认当前的任务请求是否为worker的本机任务
+	//taskType := req.taskType
+	//secId := req.sector.ID
+
+	log.Debugf("mydebug:canWorkerHandleRequest:sector:%d,task_type:%v,wid:%v",
+		req.sector.ID.Number, req.taskType, wid)
+
+	//PC1和PC2
+	if req.taskType == sealtasks.TTPreCommit1 || req.taskType == sealtasks.TTPreCommit2 {
+		if v, ok := sh.sectorToHostname[req.sector.ID]; ok {
+			whl := sh.workers[wid]
+			if v == whl.info.Hostname {
+				//sector和worker对应
+				log.Debugf("mydebug:canWorkerHandleRequest,匹配:sector:%d,task_type:%v,wid:%v,hostname:%v",
+					req.sector.ID.Number, req.taskType, wid, v)
+				return true
+			} else {
+				log.Debugf("mydebug:canWorkerHandleRequest,不匹配:sector:%d,task_type:%v,wid:%v,need:%v,cur:%v",
+					req.sector.ID.Number, req.taskType, wid, v, whl.info.Hostname)
+				return false
+			}
+		} else {
+			// 未找到记录，允许自由分配
+			log.Debugf("mydebug:canWorkerHandleRequest,未找到记录,允许运行:sector:%d,task_type:%v,wid:%v",
+				req.sector.ID.Number, req.taskType, wid)
+			return true
+		}
+	}
+
+	return true
+}
+
+//==========================================================
+//===== 自定义功能 end,blueforest 2021.2.22 ================
+//==========================================================

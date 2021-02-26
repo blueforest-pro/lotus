@@ -82,6 +82,7 @@ func (sh *scheduler) runWorker(ctx context.Context, w Worker) error {
 	return nil
 }
 
+// 执行任务分配调度
 func (sw *schedWorker) handleWorker() {
 	worker, sched := sw.worker, sw.sched
 
@@ -162,6 +163,10 @@ func (sw *schedWorker) handleWorker() {
 
 		sw.workerCompactWindows()
 
+		//{
+		//	//自定义日志
+		//	log.Debugf("mydebug-handleWorker:执行任务分配调度")
+		//}
 		// send tasks to the worker
 		sw.processAssignedWindows()
 
@@ -303,7 +308,20 @@ func (sw *schedWorker) workerCompactWindows() {
 				moved = append(moved, ti)
 				lower.todo = append(lower.todo, todo)
 				lower.allocated.add(worker.info.Resources, needRes)
+				//释放资源
 				window.allocated.free(worker.info.Resources, needRes)
+
+				//{
+				//	//////////////////////////
+				//	//自定义功能 begin,blueforest 2021.2.22
+				//	//恢复任务计数
+				//	log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
+				//		todo.sector.ID.Number, todo.taskType, sw.wid)
+				//	sh := sw.sched
+				//	sh.taskReduceOne(sw.wid, todo.taskType)
+				//	//自定义功能 end,blueforest
+				//	//////////////////////////
+				//}
 			}
 
 			if len(moved) > 0 {
@@ -405,6 +423,21 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			w.lk.Lock()
 			w.preparing.free(w.info.Resources, needRes)
 			w.lk.Unlock()
+
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//恢复任务计数
+				//log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
+				//	req.sector.ID.Number, req.taskType, sw.wid)
+				sh.taskReduceOne(sw.wid, req.taskType)
+
+				//删除sectorToHostname里的sector
+				sh.removeSectorToHostname(sw.wid, req)
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
+
 			sh.workersLk.Unlock()
 
 			select {
@@ -428,6 +461,7 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			w.lk.Lock()
 			w.preparing.free(w.info.Resources, needRes)
 			w.lk.Unlock()
+
 			sh.workersLk.Unlock()
 			defer sh.workersLk.Lock() // we MUST return locked from this function
 
@@ -438,6 +472,21 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 
 			// Do the work!
 			err = req.work(req.ctx, sh.workTracker.worker(sw.wid, w.workerRpc))
+
+			{
+				//////////////////////////
+				//自定义功能 begin,blueforest 2021.2.22
+				//恢复任务计数
+				//log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
+				//	req.sector.ID.Number, req.taskType, sw.wid)
+				sh.taskReduceOne(sw.wid, req.taskType)
+
+				//删除sectorToHostname里的sector
+				sh.removeSectorToHostname(sw.wid, req)
+
+				//自定义功能 end,blueforest
+				//////////////////////////
+			}
 
 			select {
 			case req.ret <- workerResponse{err: err}:
