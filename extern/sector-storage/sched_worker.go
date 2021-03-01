@@ -427,13 +427,13 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			{
 				//////////////////////////
 				//自定义功能 begin,blueforest 2021.2.22
-				//恢复任务计数
-				//log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
-				//	req.sector.ID.Number, req.taskType, sw.wid)
+				//任务分配异常，恢复任务计数
+				log.Debugf("mydebug:任务分配异常，恢复任务计数:sector:%d,task_type:%v,wid:%v",
+					req.sector.ID.Number, req.taskType, sw.wid)
 				sh.taskReduceOne(sw.wid, req.taskType)
 
 				//删除sectorToHostname里的sector
-				sh.removeSectorToHostname(sw.wid, req)
+				//sh.removeSectorToHostname(sw.wid, req)
 				//自定义功能 end,blueforest
 				//////////////////////////
 			}
@@ -476,9 +476,9 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			{
 				//////////////////////////
 				//自定义功能 begin,blueforest 2021.2.22
-				//恢复任务计数
-				//log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
-				//	req.sector.ID.Number, req.taskType, sw.wid)
+				//worker任务完成，恢复任务计数
+				log.Debugf("mydebug:worker任务完成，恢复任务计数:sector:%d,task_type:%v,wid:%v",
+					req.sector.ID.Number, req.taskType, sw.wid)
 				sh.taskReduceOne(sw.wid, req.taskType)
 
 				//删除sectorToHostname里的sector
