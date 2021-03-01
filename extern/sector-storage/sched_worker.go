@@ -33,6 +33,10 @@ func (sh *scheduler) runWorker(ctx context.Context, w Worker) error {
 		//自定义日志
 		log.Debugf("mydebug:runWorker,workerInfo:hostname:%v,taskres:%v",
 			info.Hostname, info.TaskResources)
+		for k, v := range info.TaskResources {
+			log.Debugf("mydebug:runWorker,workerInfo:hostname:%v,taskres:key:%v,v:%v",
+				info.Hostname, k, v)
+		}
 	}
 
 	sessID, err := w.Session(ctx)
