@@ -485,6 +485,11 @@ func (l *LocalWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {
 }
 
 func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
+	{
+		//自定义日志
+		log.Debug("mydebug:LocalWorker.Info")
+	}
+
 	hostname, err := os.Hostname() // TODO: allow overriding from config
 	if err != nil {
 		panic(err)
@@ -525,7 +530,7 @@ func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 
 	//new
 	return storiface.WorkerInfo{
-		Hostname: hostname,
+		Hostname:      hostname,
 		TaskResources: storiface.NewTaskLimitConfig(), //增加初始化配置
 		Resources: storiface.WorkerResources{
 			MemPhysical: mem.Total,
