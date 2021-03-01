@@ -29,6 +29,11 @@ func (sh *scheduler) runWorker(ctx context.Context, w Worker) error {
 		return xerrors.Errorf("getting worker info: %w", err)
 	}
 
+	{
+		//自定义日志
+		log.Debugf("mydebug:runWorker,workerInfo:%v", info)
+	}
+
 	sessID, err := w.Session(ctx)
 	if err != nil {
 		return xerrors.Errorf("getting worker session: %w", err)
