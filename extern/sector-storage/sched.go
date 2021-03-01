@@ -760,8 +760,7 @@ func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType
 //worker获取剩余任务数量
 func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.TaskType) int {
 	//只对AP和PC1任务计数
-	//if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1
-	{
+	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
 		limitCount := sh.getTaskCount(wid, phaseTaskType, "limit") // json文件限制的任务数量
 		runCount := sh.getTaskCount(wid, phaseTaskType, "run")     // 运行中的任务数量
 		freeCount := limitCount - runCount
