@@ -257,6 +257,8 @@ func NewTaskLimitConfig() map[sealtasks.TaskType]*TaskConfig {
 		}
 	}
 
+	fmt.Sprintf("mydebug:NewTaskLimitConfig:%v", cfgResources)
+
 	return cfgResources
 }
 
