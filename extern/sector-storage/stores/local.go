@@ -303,7 +303,6 @@ func (st *Local) reportHealth(ctx context.Context) {
 	}
 }
 
-//检查storage
 func (st *Local) reportStorage(ctx context.Context) {
 	st.localLk.RLock()
 

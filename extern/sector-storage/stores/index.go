@@ -170,7 +170,6 @@ func (i *Index) StorageAttach(ctx context.Context, si StorageInfo, st fsutil.FsS
 	return nil
 }
 
-//存储心跳检测
 func (i *Index) StorageReportHealth(ctx context.Context, id ID, report HealthReport) error {
 	i.lk.Lock()
 	defer i.lk.Unlock()
