@@ -61,7 +61,8 @@ type scheduler struct {
 	workerDisable  chan workerDisableReq
 
 	// owned by the sh.runSched goroutine
-	schedQueue  *requestQueue //任务请求队列
+	//任务请求队列
+	schedQueue  *requestQueue
 	openWindows []*schedWindowRequest
 
 	workTracker *workTracker
@@ -75,7 +76,8 @@ type scheduler struct {
 	//////////////////////////
 	//自定义功能 begin,blueforest 2021.2.22
 	//sector和worker的hostname对应map
-	sectorToHostname map[abi.SectorID]string
+	sectorToHostnameLk sync.RWMutex
+	sectorToHostname   map[abi.SectorID]string
 
 	//自定义功能 end,blueforest
 	//////////////////////////
@@ -477,7 +479,7 @@ func (sh *scheduler) trySched() {
 					//自定义功能 begin,blueforest 2021.2.22
 					//任务分配，添加符合条件的worker
 					//判断task的sector和worker是否匹配
-					if !sh.canWorkerHandleRequest(windowRequest.worker, task) {
+					if !sh.canWorkerHandleRequest(windowRequest.worker, worker, task) {
 						continue
 					}
 					//自定义功能 end,blueforest
@@ -695,93 +697,117 @@ func (sh *scheduler) Close(ctx context.Context) error {
 
 //worker增加任务计数
 func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
-	if whl, ok := sh.workers[wid]; ok {
-		whl.info.TaskResourcesLk.Lock()
-		defer whl.info.TaskResourcesLk.Unlock()
-		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
-			counts.RunCount++
-			log.Debugf("mydebug:taskAddOne增加任务计数:task_type:%v,workerId:%v,limitcount:%v,runcount:%v",
-				phaseTaskType, wid, counts.LimitCount, counts.RunCount)
+	//只对AP和PC1任务计数
+	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+		if whl, ok := sh.workers[wid]; ok {
+			whl.info.TaskResourcesLk.Lock()
+			defer whl.info.TaskResourcesLk.Unlock()
+			if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+				counts.RunCount++
+				log.Debugf("mydebug:taskAddOne增加任务计数:task_type:%v,workerId:%v,limitcount:%v,runcount:%v",
+					phaseTaskType, wid, counts.LimitCount, counts.RunCount)
+			}
 		}
 	}
 }
 
 //worker扣减任务计数
 func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
-	if whl, ok := sh.workers[wid]; ok {
-		whl.info.TaskResourcesLk.Lock()
-		defer whl.info.TaskResourcesLk.Unlock()
-		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
-			counts.RunCount--
-			log.Debugf("mydebug:taskAddOne扣减任务计数:task_type:%v,workerId:%v,limitcount:%v,runcount:%v",
-				phaseTaskType, wid, counts.LimitCount, counts.RunCount)
+	//只对AP和PC1任务计数
+	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+		if whl, ok := sh.workers[wid]; ok {
+			whl.info.TaskResourcesLk.Lock()
+			defer whl.info.TaskResourcesLk.Unlock()
+			if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+				counts.RunCount--
+				log.Debugf("mydebug:taskAddOne扣减任务计数:task_type:%v,workerId:%v,limitcount:%v,runcount:%v",
+					phaseTaskType, wid, counts.LimitCount, counts.RunCount)
+			}
 		}
 	}
 }
 
 //worker获取任务计数
 func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType, typeCount string) int {
-	if whl, ok := sh.workers[wid]; ok {
-		if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
-			whl.info.TaskResourcesLk.Lock()
-			defer whl.info.TaskResourcesLk.Unlock()
-			if typeCount == "limit" {
-				return counts.LimitCount
-			}
-			if typeCount == "run" {
-				return counts.RunCount
+	//只对AP和PC1任务计数
+	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+		if whl, ok := sh.workers[wid]; ok {
+			if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
+				whl.info.TaskResourcesLk.Lock()
+				defer whl.info.TaskResourcesLk.Unlock()
+				if typeCount == "limit" {
+					return counts.LimitCount
+				}
+				if typeCount == "run" {
+					return counts.RunCount
+				}
 			}
 		}
+		return 0
 	}
-	return 0
+
+	if typeCount == "limit" {
+		//除AP和PC1外，其他任务类型都返回1
+		return 1
+	}
+	if typeCount == "run" {
+		//除AP和PC1外，其他任务类型都返回0
+		return 0
+	}
+	return 1
 }
 
 //worker获取剩余任务数量
 func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.TaskType) int {
-	limitCount := sh.getTaskCount(wid, phaseTaskType, "limit") // json文件限制的任务数量
-	runCount := sh.getTaskCount(wid, phaseTaskType, "run")     // 运行中的任务数量
-	freeCount := limitCount - runCount
-
-	if limitCount == 0 { // 0:禁止
-		return 0
-	}
-
-	whl := sh.workers[wid]
-	log.Infof("mydebug:getTaskFreeCount:wid:%s,hostname:%v,take_type:%s,limit:%d,runCount:%d,free:%d",
-		wid, whl.info.Hostname, phaseTaskType, limitCount, runCount, freeCount)
-
+	//只对AP和PC1任务计数
 	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
-		if freeCount >= 0 { // 空闲数量不小于0，小于0也要校准为0
-			return freeCount
+		limitCount := sh.getTaskCount(wid, phaseTaskType, "limit") // json文件限制的任务数量
+		runCount := sh.getTaskCount(wid, phaseTaskType, "run")     // 运行中的任务数量
+		freeCount := limitCount - runCount
+
+		if limitCount == 0 { // 0:禁止
+			return 0
 		}
-		return 0
-	}
 
-	if phaseTaskType == sealtasks.TTPreCommit2 || phaseTaskType == sealtasks.TTCommit1 {
-		c2runCount := sh.getTaskCount(wid, sealtasks.TTCommit2, "run")
-		if freeCount >= 0 && c2runCount <= 0 { // 需做的任务空闲数量不小于0，且没有c2任务在运行
-			return freeCount
+		whl := sh.workers[wid]
+		log.Infof("mydebug:getTaskFreeCount:wid:%s,hostname:%v,take_type:%s,limit:%d,runCount:%d,free:%d",
+			wid, whl.info.Hostname, phaseTaskType, limitCount, runCount, freeCount)
+
+		if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+			if freeCount >= 0 { // 空闲数量不小于0，小于0也要校准为0
+				return freeCount
+			}
+			return 0
 		}
-		//log.Infof("mydebug:worker already doing C2 taskjob")
-		return 0
 	}
+	//除AP和PC1外，其他任务类型都返回1
+	return 1
 
-	if phaseTaskType == sealtasks.TTCommit2 {
-		p2runCount := sh.getTaskCount(wid, sealtasks.TTPreCommit2, "run")
-		c1runCount := sh.getTaskCount(wid, sealtasks.TTCommit1, "run")
-		if freeCount >= 0 && p2runCount <= 0 && c1runCount <= 0 { // 需做的任务空闲数量不小于0，且没有p2\c1任务在运行
-			return freeCount
-		}
-		//log.Infof("mydebug:worker already doing P2C1 taskjob")
-		return 0
-	}
-
-	if phaseTaskType == sealtasks.TTFetch || phaseTaskType == sealtasks.TTFinalize ||
-		phaseTaskType == sealtasks.TTUnseal || phaseTaskType == sealtasks.TTReadUnsealed { // 不限制
-		return 1
-	}
-
-	return 0
+	//if phaseTaskType == sealtasks.TTPreCommit2 || phaseTaskType == sealtasks.TTCommit1 {
+	//	c2runCount := sh.getTaskCount(wid, sealtasks.TTCommit2, "run")
+	//	if freeCount >= 0 && c2runCount <= 0 { // 需做的任务空闲数量不小于0，且没有c2任务在运行
+	//		return freeCount
+	//	}
+	//	//log.Infof("mydebug:worker already doing C2 taskjob")
+	//	return 0
+	//}
+	//
+	//if phaseTaskType == sealtasks.TTCommit2 {
+	//	p2runCount := sh.getTaskCount(wid, sealtasks.TTPreCommit2, "run")
+	//	c1runCount := sh.getTaskCount(wid, sealtasks.TTCommit1, "run")
+	//	if freeCount >= 0 && p2runCount <= 0 && c1runCount <= 0 { // 需做的任务空闲数量不小于0，且没有p2\c1任务在运行
+	//		return freeCount
+	//	}
+	//	//log.Infof("mydebug:worker already doing P2C1 taskjob")
+	//	return 0
+	//}
+	//
+	//if phaseTaskType == sealtasks.TTFetch || phaseTaskType == sealtasks.TTFinalize ||
+	//	phaseTaskType == sealtasks.TTUnseal || phaseTaskType == sealtasks.TTReadUnsealed { // 不限制
+	//	return 1
+	//}
+	//
+	//return 0
 }
 
 //设置sectorToHostname
@@ -790,37 +816,41 @@ func (sh *scheduler) setSectorToHostname(wid WorkerID, req *workerRequest) {
 	log.Debugf("mydebug:setSectorToHostname:sector:%d,task_type:%v,wid:%v,hostname:%v",
 		req.sector.ID.Number, req.taskType, wid, sh.workers[wid].info.Hostname)
 
+	sh.sectorToHostnameLk.Lock()
 	sh.sectorToHostname[req.sector.ID] = sh.workers[wid].info.Hostname
+	sh.sectorToHostnameLk.Unlock()
 }
 
 //TTFinalize任务阶段，删除sectorToHostname里的sector
 func (sh *scheduler) removeSectorToHostname(wid WorkerID, req *workerRequest) {
-
 	//TTFinalize任务阶段，删除sectorToHostname里的sector
 	if req.taskType == sealtasks.TTFinalize {
 		log.Debugf("mydebug:removeSectorToHostname:sector:%d,task_type:%v,wid:%v,hostname:%v",
 			req.sector.ID.Number, req.taskType, wid, sh.workers[wid].info.Hostname)
 
 		secId := req.sector.ID
-		if _, ok := sh.sectorToHostname[secId]; ok {
-			delete(sh.sectorToHostname, secId)
-		}
+		sh.sectorToHostnameLk.Lock()
+		delete(sh.sectorToHostname, secId)
+		sh.sectorToHostnameLk.Unlock()
+		//if _, ok := sh.sectorToHostname[secId]; ok {
+		//	delete(sh.sectorToHostname, secId)
+		//}
 	}
 }
 
 //判断worker是否可以处理任务请求
-func (sh *scheduler) canWorkerHandleRequest(wid WorkerID, req *workerRequest) bool {
+func (sh *scheduler) canWorkerHandleRequest(wid WorkerID, whl *workerHandle, req *workerRequest) bool {
 	//PC1,PC2的任务，确认当前的任务请求是否为worker的本机任务
-	//taskType := req.taskType
-	//secId := req.sector.ID
-
-	log.Debugf("mydebug:canWorkerHandleRequest:sector:%d,task_type:%v,wid:%v",
-		req.sector.ID.Number, req.taskType, wid)
-
-	//PC1和PC2
+	//只对PC1和PC2任务做hostname检查
 	if req.taskType == sealtasks.TTPreCommit1 || req.taskType == sealtasks.TTPreCommit2 {
-		if v, ok := sh.sectorToHostname[req.sector.ID]; ok {
-			whl := sh.workers[wid]
+		log.Debugf("mydebug:canWorkerHandleRequest:sector:%d,task_type:%v,wid:%v",
+			req.sector.ID.Number, req.taskType, wid)
+
+		sh.sectorToHostnameLk.RLock()
+		v, ok := sh.sectorToHostname[req.sector.ID]
+		sh.sectorToHostnameLk.RUnlock()
+
+		if ok {
 			if v == whl.info.Hostname {
 				//sector和worker对应
 				log.Debugf("mydebug:canWorkerHandleRequest,匹配:sector:%d,task_type:%v,wid:%v,hostname:%v",
