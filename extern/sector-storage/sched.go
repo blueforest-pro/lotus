@@ -439,11 +439,6 @@ func (sh *scheduler) trySched() {
 			task := (*sh.schedQueue)[sqi]
 			needRes := ResourceTable[task.taskType][task.sector.ProofType]
 
-			//{
-			//	//自定义日志
-			//	log.Debugf("mydebug-trySched:taskType:%v", task.taskType)
-			//}
-
 			task.indexHeap = sqi
 			for wnd, windowRequest := range sh.openWindows {
 				worker, ok := sh.workers[windowRequest.worker]
@@ -453,17 +448,6 @@ func (sh *scheduler) trySched() {
 					continue
 				}
 
-				{
-					////自定义日志
-					//log.Debugf("mydebug-trySched:预分配任务,workerId:%v", windowRequest.worker)
-
-					////任务信息
-					//log.Debugf("mydebug-trySched:预分配任务,任务信息:%v", task)
-
-					////worker信息
-					//log.Debugf("mydebug-trySched:预分配任务,worker信息:%v", worker)
-				}
-
 				if !worker.enabled {
 					log.Debugw("skipping disabled worker", "worker", windowRequest.worker)
 					continue
@@ -471,6 +455,18 @@ func (sh *scheduler) trySched() {
 
 				// TODO: allow bigger windows
 				if !windows[wnd].allocated.canHandleRequest(needRes, windowRequest.worker, "schedAcceptable", worker.info.Resources) {
+					continue
+				}
+
+				rpcCtx, cancel := context.WithTimeout(task.ctx, SelectorTimeout)
+				ok, err := task.sel.Ok(rpcCtx, task.taskType, task.sector.ProofType, worker)
+				cancel()
+				if err != nil {
+					log.Errorf("trySched(1) req.sel.Ok error: %+v", err)
+					continue
+				}
+
+				if !ok {
 					continue
 				}
 
@@ -484,18 +480,6 @@ func (sh *scheduler) trySched() {
 					}
 					//自定义功能 end,blueforest
 					//////////////////////////
-				}
-
-				rpcCtx, cancel := context.WithTimeout(task.ctx, SelectorTimeout)
-				ok, err := task.sel.Ok(rpcCtx, task.taskType, task.sector.ProofType, worker)
-				cancel()
-				if err != nil {
-					log.Errorf("trySched(1) req.sel.Ok error: %+v", err)
-					continue
-				}
-
-				if !ok {
-					continue
 				}
 
 				acceptableWindows[sqi] = append(acceptableWindows[sqi], wnd)
