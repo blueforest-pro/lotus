@@ -331,3 +331,21 @@ docsgen:
 
 print-%:
 	@echo $*=$($*)
+
+################################################
+#add by blueforst,20210302,begin
+################################################
+dev-install: dev-install-daemon dev-install-miner dev-install-worker
+
+dev-install-daemon:
+	install -C ./lotus /usr/local/bin/dev-lotus
+
+dev-install-miner:
+	install -C ./lotus-miner /usr/local/bin/dev-lotus-miner
+
+dev-install-worker:
+	install -C ./lotus-worker /usr/local/bin/dev-lotus-worker
+
+################################################
+#add by blueforst,20210302,end
+################################################
