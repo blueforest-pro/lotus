@@ -173,10 +173,6 @@ func (sw *schedWorker) handleWorker() {
 
 		sw.workerCompactWindows()
 
-		//{
-		//	//自定义日志
-		//	log.Debugf("mydebug-handleWorker:执行任务分配调度")
-		//}
 		// send tasks to the worker
 		sw.processAssignedWindows()
 
@@ -320,18 +316,6 @@ func (sw *schedWorker) workerCompactWindows() {
 				lower.allocated.add(worker.info.Resources, needRes)
 				//释放资源
 				window.allocated.free(worker.info.Resources, needRes)
-
-				//{
-				//	//////////////////////////
-				//	//自定义功能 begin,blueforest 2021.2.22
-				//	//恢复任务计数
-				//	log.Debugf("mydebug:恢复任务计数:sector:%d,task_type:%v,wid:%v",
-				//		todo.sector.ID.Number, todo.taskType, sw.wid)
-				//	sh := sw.sched
-				//	sh.taskReduceOne(sw.wid, todo.taskType)
-				//	//自定义功能 end,blueforest
-				//	//////////////////////////
-				//}
 			}
 
 			if len(moved) > 0 {

@@ -243,34 +243,17 @@ func (sh *scheduler) runSched() {
 	iw := time.After(InitWait)
 	var initialised bool
 
-	//{
-	//	//自定义日志
-	//	log.Debugf("mydebug:runSched")
-	//}
-
 	for {
 		var doSched bool
 		var toDisable []workerDisableReq
 
 		select {
 		case <-sh.workerChange:
-			//{
-			//	//自定义日志
-			//	log.Debugf("mydebug:workerChange")
-			//}
 			doSched = true
 		case dreq := <-sh.workerDisable:
-			//{
-			//	//自定义日志
-			//	log.Debugf("mydebug:workerDisable")
-			//}
 			toDisable = append(toDisable, dreq)
 			doSched = true
 		case req := <-sh.schedule:
-			//{
-			//	//自定义日志
-			//	log.Debugf("mydebug:schedule")
-			//}
 			sh.schedQueue.Push(req)
 			doSched = true
 
@@ -278,17 +261,9 @@ func (sh *scheduler) runSched() {
 				sh.testSync <- struct{}{}
 			}
 		case req := <-sh.windowRequests:
-			//{
-			//	//自定义日志
-			//	log.Debugf("mydebug:windowRequests")
-			//}
 			sh.openWindows = append(sh.openWindows, req)
 			doSched = true
 		case ireq := <-sh.info:
-			//{
-			//	//自定义日志
-			//	log.Debugf("mydebug:info")
-			//}
 			ireq(sh.diag())
 
 		case <-iw:
@@ -308,25 +283,13 @@ func (sh *scheduler) runSched() {
 				select {
 				case <-sh.workerChange:
 				case dreq := <-sh.workerDisable:
-					//{
-					//	//自定义日志
-					//	log.Debugf("mydebug-loop:workerDisable")
-					//}
 					toDisable = append(toDisable, dreq)
 				case req := <-sh.schedule:
-					//{
-					//	//自定义日志
-					//	log.Debugf("mydebug-loop:schedule")
-					//}
 					sh.schedQueue.Push(req)
 					if sh.testSync != nil {
 						sh.testSync <- struct{}{}
 					}
 				case req := <-sh.windowRequests:
-					//{
-					//	//自定义日志
-					//	log.Debugf("mydebug-loop:windowRequests")
-					//}
 					sh.openWindows = append(sh.openWindows, req)
 				default:
 					break loop
@@ -355,10 +318,6 @@ func (sh *scheduler) runSched() {
 				req.done()
 			}
 
-			//{
-			//	//自定义日志
-			//	log.Debugf("mydebug:trySched")
-			//}
 			sh.trySched()
 		}
 
@@ -546,8 +505,6 @@ func (sh *scheduler) trySched() {
 				//////////////////////////
 				//自定义功能 begin,blueforest 2021.2.22
 				//判断任务计数是否达到限制
-				//自定义日志
-				//log.Debugf("mydebug:SCHED try assign sqi:%d sector %d to window %d", sqi, task.sector.ID.Number, wnd)
 				freecount := sh.getTaskFreeCount(wid, task.taskType)
 				if freecount <= 0 {
 					log.Debugf("mydebug:任务数量达到上限:sector: %d,task_type:%v, worker:%v",
