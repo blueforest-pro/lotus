@@ -119,7 +119,8 @@ an existing lotus binary in your PATH. This may cause problems if you don't run 
 
 .PHONY: build
 
-install: install-daemon install-miner install-worker
+#install: install-daemon install-miner install-worker
+install: install-miner install-worker
 
 install-daemon:
 	install -C ./lotus /usr/local/bin/lotus
