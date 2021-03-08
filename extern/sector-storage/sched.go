@@ -714,8 +714,19 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 			return 0
 		}
 
-		if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
-			if freeCount >= 0 { // 空闲数量不小于0，小于0也要校准为0
+		//AP要同时判断AP和PC1，避免有些worker分不到AP
+		if phaseTaskType == sealtasks.TTAddPiece {
+			// 同时判断PC1任务计数
+			pc1limitCount := sh.getTaskCount(wid, sealtasks.TTPreCommit1, "limit")
+			pc1RuncCount := sh.getTaskCount(wid, sealtasks.TTPreCommit1, "run")
+			pc1FreeCount := pc1limitCount - pc1RuncCount
+
+			if freeCount > 0 && pc1FreeCount > 0 { // 空闲数量不小于0，小于0也要校准为0
+				return freeCount
+			}
+			return 0
+		} else if phaseTaskType == sealtasks.TTPreCommit1 {
+			if freeCount > 0 { // 空闲数量不小于0，小于0也要校准为0
 				return freeCount
 			}
 			return 0
