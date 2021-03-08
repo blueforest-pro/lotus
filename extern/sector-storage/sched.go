@@ -638,8 +638,10 @@ func (sh *scheduler) Close(ctx context.Context) error {
 
 //worker增加任务计数
 func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
-	//只对AP和PC1任务计数
-	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+	//只对AP,PC1,TTFetch任务计数
+	if phaseTaskType == sealtasks.TTAddPiece ||
+		phaseTaskType == sealtasks.TTPreCommit1 ||
+		phaseTaskType == sealtasks.TTFetch {
 		if whl, ok := sh.workers[wid]; ok {
 			whl.info.TaskResourcesLk.Lock()
 			defer whl.info.TaskResourcesLk.Unlock()
@@ -654,8 +656,10 @@ func (sh *scheduler) taskAddOne(wid WorkerID, phaseTaskType sealtasks.TaskType) 
 
 //worker扣减任务计数
 func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskType) {
-	//只对AP和PC1任务计数
-	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+	//只对AP,PC1,TTFetch任务计数
+	if phaseTaskType == sealtasks.TTAddPiece ||
+		phaseTaskType == sealtasks.TTPreCommit1 ||
+		phaseTaskType == sealtasks.TTFetch {
 		if whl, ok := sh.workers[wid]; ok {
 			whl.info.TaskResourcesLk.Lock()
 			defer whl.info.TaskResourcesLk.Unlock()
@@ -670,8 +674,10 @@ func (sh *scheduler) taskReduceOne(wid WorkerID, phaseTaskType sealtasks.TaskTyp
 
 //worker获取任务计数
 func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType, typeCount string) int {
-	//只对AP和PC1任务计数
-	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+	//只对AP,PC1,TTFetch任务计数
+	if phaseTaskType == sealtasks.TTAddPiece ||
+		phaseTaskType == sealtasks.TTPreCommit1 ||
+		phaseTaskType == sealtasks.TTFetch {
 		if whl, ok := sh.workers[wid]; ok {
 			if counts, ok := whl.info.TaskResources[phaseTaskType]; ok {
 				whl.info.TaskResourcesLk.Lock()
@@ -688,11 +694,11 @@ func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType
 	}
 
 	if typeCount == "limit" {
-		//除AP和PC1外，其他任务类型都返回1
+		//除AP,PC1,TTFetch外，其他任务类型都返回1
 		return 1
 	}
 	if typeCount == "run" {
-		//除AP和PC1外，其他任务类型都返回0
+		//除AP,PC1,TTFetch外，其他任务类型都返回0
 		return 0
 	}
 	return 1
@@ -700,8 +706,10 @@ func (sh *scheduler) getTaskCount(wid WorkerID, phaseTaskType sealtasks.TaskType
 
 //worker获取剩余任务数量
 func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.TaskType) int {
-	//只对AP和PC1任务计数
-	if phaseTaskType == sealtasks.TTAddPiece || phaseTaskType == sealtasks.TTPreCommit1 {
+	//只对AP和PC1任务计数,以及对miner的TTFetch计数
+	if phaseTaskType == sealtasks.TTAddPiece ||
+		phaseTaskType == sealtasks.TTPreCommit1 ||
+		phaseTaskType == sealtasks.TTFetch {
 		limitCount := sh.getTaskCount(wid, phaseTaskType, "limit") // json文件限制的任务数量
 		runCount := sh.getTaskCount(wid, phaseTaskType, "run")     // 运行中的任务数量
 		freeCount := limitCount - runCount
@@ -725,14 +733,14 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 				return freeCount
 			}
 			return 0
-		} else if phaseTaskType == sealtasks.TTPreCommit1 {
+		} else {
 			if freeCount > 0 { // 空闲数量不小于0，小于0也要校准为0
 				return freeCount
 			}
 			return 0
 		}
 	}
-	//除AP和PC1外，其他任务类型都返回1
+	//除AP,PC1,TTFetch外，其他任务类型都返回1
 	return 1
 
 	//if phaseTaskType == sealtasks.TTPreCommit2 || phaseTaskType == sealtasks.TTCommit1 {
