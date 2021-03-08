@@ -507,8 +507,8 @@ func (sh *scheduler) trySched() {
 				//判断任务计数是否达到限制
 				freecount := sh.getTaskFreeCount(wid, task.taskType)
 				if freecount <= 0 {
-					log.Debugf("mydebug:任务数量达到上限:sector: %d,task_type:%v, worker:%v",
-						task.sector.ID.Number, task.taskType, wid)
+					//log.Debugf("mydebug:任务数量达到上限:sector: %d,task_type:%v, worker:%v",
+					//	task.sector.ID.Number, task.taskType, wid)
 					continue
 				}
 				//自定义功能 end,blueforest
@@ -706,9 +706,9 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 		runCount := sh.getTaskCount(wid, phaseTaskType, "run")     // 运行中的任务数量
 		freeCount := limitCount - runCount
 
-		whl := sh.workers[wid]
-		log.Infof("mydebug:getTaskFreeCount:wid:%s,hostname:%v,take_type:%s,limit:%d,runCount:%d,free:%d",
-			wid, whl.info.Hostname, phaseTaskType, limitCount, runCount, freeCount)
+		//whl := sh.workers[wid]
+		//log.Infof("mydebug:getTaskFreeCount:wid:%s,hostname:%v,take_type:%s,limit:%d,runCount:%d,free:%d",
+		//	wid, whl.info.Hostname, phaseTaskType, limitCount, runCount, freeCount)
 
 		if limitCount == 0 { // 0:禁止
 			return 0
@@ -795,8 +795,8 @@ func (sh *scheduler) canWorkerHandleRequest(wid WorkerID, whl *workerHandle, req
 	//PC1,PC2的任务，确认当前的任务请求是否为worker的本机任务
 	//只对PC1和PC2任务做hostname检查
 	if req.taskType == sealtasks.TTPreCommit1 || req.taskType == sealtasks.TTPreCommit2 {
-		log.Debugf("mydebug:canWorkerHandleRequest:sector:%d,task_type:%v,wid:%v",
-			req.sector.ID.Number, req.taskType, wid)
+		//log.Debugf("mydebug:canWorkerHandleRequest:sector:%d,task_type:%v,wid:%v",
+		//	req.sector.ID.Number, req.taskType, wid)
 
 		sh.sectorToHostnameLk.RLock()
 		v, ok := sh.sectorToHostname[req.sector.ID]
@@ -805,18 +805,18 @@ func (sh *scheduler) canWorkerHandleRequest(wid WorkerID, whl *workerHandle, req
 		if ok {
 			if v == whl.info.Hostname {
 				//sector和worker对应
-				log.Debugf("mydebug:canWorkerHandleRequest,匹配:sector:%d,task_type:%v,wid:%v,hostname:%v",
-					req.sector.ID.Number, req.taskType, wid, v)
+				//log.Debugf("mydebug:canWorkerHandleRequest,匹配:sector:%d,task_type:%v,wid:%v,hostname:%v",
+				//	req.sector.ID.Number, req.taskType, wid, v)
 				return true
 			} else {
-				log.Debugf("mydebug:canWorkerHandleRequest,不匹配:sector:%d,task_type:%v,wid:%v,need:%v,cur:%v",
-					req.sector.ID.Number, req.taskType, wid, v, whl.info.Hostname)
+				//log.Debugf("mydebug:canWorkerHandleRequest,不匹配:sector:%d,task_type:%v,wid:%v,need:%v,cur:%v",
+				//	req.sector.ID.Number, req.taskType, wid, v, whl.info.Hostname)
 				return false
 			}
 		} else {
 			// 未找到记录，允许自由分配
-			log.Debugf("mydebug:canWorkerHandleRequest,未找到记录,允许运行:sector:%d,task_type:%v,wid:%v",
-				req.sector.ID.Number, req.taskType, wid)
+			//log.Debugf("mydebug:canWorkerHandleRequest,未找到记录,允许运行:sector:%d,task_type:%v,wid:%v",
+			//	req.sector.ID.Number, req.taskType, wid)
 			return true
 		}
 	}
