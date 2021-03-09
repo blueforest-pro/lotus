@@ -186,7 +186,7 @@ func NewTaskLimitConfig() map[sealtasks.TaskType]*TaskConfig {
 		PreCommit2:   8,
 		Commit1:      8,
 		Commit2:      8,
-		Fetch:        2, //miner C2后,miner传输文件到存储，同时允许2个并发
+		Fetch:        3, //miner C2后,miner传输文件到存储，同时允许2个并发
 		Finalize:     8,
 		Unseal:       8,
 		ReadUnsealed: 8,
