@@ -181,12 +181,12 @@ type taskLimitConfig struct {
 
 func NewTaskLimitConfig() map[sealtasks.TaskType]*TaskConfig {
 	config := &taskLimitConfig{
-		AddPiece:     3,
+		AddPiece:     2,
 		PreCommit1:   7,
 		PreCommit2:   8,
 		Commit1:      8,
 		Commit2:      8,
-		Fetch:        3, //miner C2后,miner传输文件到存储，同时允许3个并发
+		Fetch:        2, //miner C2后,miner传输文件到存储，同时允许2个并发
 		Finalize:     8,
 		Unseal:       8,
 		ReadUnsealed: 8,
