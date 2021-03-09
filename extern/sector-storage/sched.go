@@ -730,7 +730,7 @@ func (sh *scheduler) getTaskFreeCount(wid WorkerID, phaseTaskType sealtasks.Task
 			pc1FreeCount := pc1limitCount - pc1RuncCount - runCount
 
 			if freeCount > 0 &&
-				runCount < 1 && //不更新worker,临时限制worker的AP任务最多1个并发
+				//runCount < 1 && //不更新worker,临时限制worker的AP任务最多1个并发
 				pc1FreeCount > 0 { // 空闲数量不小于0，小于0也要校准为0
 				return freeCount
 			}
